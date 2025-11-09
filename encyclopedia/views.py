@@ -12,8 +12,8 @@ def index(request):
 def entry(request, title):
     content=util.get_entry(title)
     if content is None:
-        return render (request,"encyclopedia/error.html",{
-            "message":f"The requested {title}  page was not found."
+        return render (request,"encyclopedia/errors/findError.html",{
+            "message":f"The requested \"{title}\" wiki, was not found."
         })
     
     content_html= markdown2.markdown(content)
@@ -21,3 +21,23 @@ def entry(request, title):
         "title":title,
         "content":content_html
     })
+
+def search(request):
+    query=request.GET.get("q","")
+    entries=util.list_entries()
+    if query in entries:   
+      return render(request,"encyclopedia/entry.html",{
+           "title":query,
+          "content":markdown2.markdown(util.get_entry(query))
+        })
+    
+    suggestions=[entry for entry in entries if query.lower() in entry.lower()]
+    if not suggestions:
+        return render (request,"encyclopedia/errors/findError.html",{
+            "message":f"No search results found for \"{query}\"."
+        })
+    return render(request,"encyclopedia/errors/searchError.html",{
+        "suggestions":suggestions
+        })
+
+
