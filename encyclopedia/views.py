@@ -25,11 +25,12 @@ def entry(request, title):
 def search(request):
     query=request.GET.get("q","")
     entries=util.list_entries()
-    if query in entries:   
-      return render(request,"encyclopedia/entry.html",{
-           "title":query,
-          "content":markdown2.markdown(util.get_entry(query))
-        })
+    for i in range (len(entries)): 
+        if query.lower() == entries[i].lower():
+            return render(request,"encyclopedia/entry.html",{
+                "title":query,
+                "content":markdown2.markdown(util.get_entry(entries[i]))
+                })
     
     suggestions=[entry for entry in entries if query.lower() in entry.lower()]
     if not suggestions:
@@ -40,4 +41,6 @@ def search(request):
         "suggestions":suggestions
         })
 
+def createNewPage(request):
+    return render(request,"encyclopedia/createNewPage.html")
 
