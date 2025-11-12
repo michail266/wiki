@@ -8,10 +8,18 @@ from . import util
 class NewPageForm(forms.Form):
     #this helped a lot https://docs.djangoproject.com/en/5.2/ref/forms/widgets/
     title = forms.CharField(label="Title", max_length=20)
-    content = forms.CharField(label="Content", widget=forms.Textarea(attrs={
+    content = forms.CharField(label="", widget=forms.Textarea(attrs={
         "style":"height: 300px; width: 600px;"
     
     }))
+
+def titleCheck(value):
+    entries=util.list_entries()
+    for i in range (len(entries)): #not case sessitive search
+        if value.lower() == entries[i].lower():
+            return util.get_entry(entries[i])
+    return None
+
 
 def index(request):
     return render(request, "encyclopedia/index.html", {
@@ -34,20 +42,23 @@ def entry(request, title):
 def search(request):
     query=request.GET.get("q","")
     entries=util.list_entries()
-    for i in range (len(entries)): #not case sessitive search
-        if query.lower() == entries[i].lower():
-            return render(request,"encyclopedia/entry.html",{
-                "title":query,
-                "content":markdown2.markdown(util.get_entry(entries[i]))
-                })
+
+    #not case sessitive search
+    if  titleCheck(query):
+        return render(request,"encyclopedia/entry.html",{
+        "title":query,
+        "content":markdown2.markdown(titleCheck(query))
+        })
+    
     #  no exact match found, look for substrings
     suggestions=[entry for entry in entries if query.lower() in entry.lower()]
+
     # if no suggestions found
     if not suggestions:
         return render (request,"encyclopedia/errors/findError.html",{
             "message":f"No search results found for \"{query}\"."
         })
-    
+
     return render(request,"encyclopedia/errors/searchError.html",{
         "suggestions":suggestions
         })
@@ -58,14 +69,11 @@ def createNewPage(request):
         if form.is_valid():
             title=form.cleaned_data["title"]
             content=form.cleaned_data["content"]
-
-            if title.lower() in [t.lower() for t in util.list_entries()]:#to do: create a fucntion to check if title exists true/false
-                form.add_error('title', 'A wiki with this title already exists.')
+            if titleCheck(title):#to do: create a fucntion to check if title exists true/false
                 return render (request,"encyclopedia/errors/findError.html",{
                     "message":f"A wiki with the title \"{title}\" already exists."
                 })        
             
-
             util.save_entry(title,content)
             return render(request,"encyclopedia/index.html",{"entries":util.list_entries()})   
          
@@ -78,3 +86,27 @@ def createNewPage(request):
     "form":NewPageForm
     })
 
+def editPage(request,title):
+    if request.method == "POST":
+        form = NewPageForm(request.POST)
+        util.remove_entry(title) #remove old entry to avoid duplicates
+        if form.is_valid():
+            title=form.cleaned_data["title"]
+            content=form.cleaned_data["content"]               
+            util.save_entry(title,content)
+            return render(request,"encyclopedia/entry.html",{
+                "content":markdown2.markdown(content),
+                "title":title
+                })
+        else:
+            return render(request,"encyclopedia/edit.html",{
+                "form":form,
+                "title":title
+                })
+    return render(request,"encyclopedia/edit.html",{
+        "form":NewPageForm(initial={
+            "title":title,
+            "content":util.get_entry(title)
+        }),
+        "title":title
+        })
