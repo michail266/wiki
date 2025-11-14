@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django import forms
 from django.core.exceptions import ValidationError
 import markdown2
+import random
 
 from . import util
 
@@ -86,10 +87,10 @@ def createNewPage(request):
     "form":NewPageForm
     })
 
-def editPage(request,title):
+def editPage(request,title):#I had to add remove_entry in util.py to avoid duplicates
     if request.method == "POST":
         form = NewPageForm(request.POST)
-        util.remove_entry(title) #remove old entry to avoid duplicates
+        util.remove_entry(title)  
         if form.is_valid():
             title=form.cleaned_data["title"]
             content=form.cleaned_data["content"]               
@@ -110,3 +111,11 @@ def editPage(request,title):
         }),
         "title":title
         })
+
+def randomPage(request): #very simple, it can show multiple times the same page
+    entries=util.list_entries()
+    randomChoice=random.choice(entries)
+    return render(request,"encyclopedia/entry.html",{
+        "title":randomChoice,
+        "content":markdown2.markdown(util.get_entry(randomChoice))  
+        })  
