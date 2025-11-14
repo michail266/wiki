@@ -44,50 +44,49 @@ def search(request):
     query=request.GET.get("q","")
     entries=util.list_entries()
 
-    #not case sessitive search
+    #not case-sessitive search
     if  titleCheck(query):
         return render(request,"encyclopedia/entry.html",{
         "title":query,
         "content":markdown2.markdown(titleCheck(query))
         })
     
-    #  no exact match found, look for substrings
-    suggestions=[entry for entry in entries if query.lower() in entry.lower()]
+    #  no exact match found, look for substrings. This logic helped me a lot https://stackoverflow.com/questions/43302810/linear-search-python
 
-    # if no suggestions found
+    suggestions=[entry for entry in entries if query.lower() in entry.lower()]
+     # if no suggestions found
     if not suggestions:
         return render (request,"encyclopedia/errors/findError.html",{
             "message":f"No search results found for \"{query}\"."
         })
-
     return render(request,"encyclopedia/errors/searchError.html",{
         "suggestions":suggestions
         })
 
 def createNewPage(request):
-    if request.method == "POST":       
+    if request.method == "POST": #2.if the form is submitted       
         form = NewPageForm(request.POST)
-        if form.is_valid():
+        if form.is_valid(): #3.all validation rules pass
             title=form.cleaned_data["title"]
             content=form.cleaned_data["content"]
-            if titleCheck(title):#to do: create a fucntion to check if title exists true/false
+            if titleCheck(title): #4.and the title does not exist already
                 return render (request,"encyclopedia/errors/findError.html",{
                     "message":f"A wiki with the title \"{title}\" already exists."
                 })        
             
             util.save_entry(title,content)
-            return render(request,"encyclopedia/index.html",{"entries":util.list_entries()})   
+            return render(request,"encyclopedia/index.html",{"entries":util.list_entries()})#5.successful creation   
          
         else:        
              return render(request,"encyclopedia/createNewPage.html",{
                 "form":NewPageForm()
                 })  
         
-    return render(request,"encyclopedia/createNewPage.html",{
+    return render(request,"encyclopedia/createNewPage.html",{ #1.first time visit
     "form":NewPageForm
     })
 
-def editPage(request,title):#I had to add remove_entry in util.py to avoid duplicates
+def editPage(request,title):#I had to add remove_entry in util.py to avoid duplicates, the rest is similar to createNewPage
     if request.method == "POST":
         form = NewPageForm(request.POST)
         util.remove_entry(title)  
